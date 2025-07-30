@@ -1,0 +1,17 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>🛡️ Insurance Clause Query</title>
+</head>
+<body>
+    <h2>🛡️ Insurance Clause Query System - HackRx</h2>
+    <form method="post">
+        <input type="text" name="query" placeholder="Enter your claim query..." style="width: 400px;" required>
+        <button type="submit">Check</button>
+    </form>
+    {% if request.method == 'POST' %}
+    <h3>Response:</h3>
+    <pre>{{ response | tojson(indent=2) }}</pre>
+    {% endif %}
+</body>
+</html>
