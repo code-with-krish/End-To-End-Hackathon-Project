@@ -14,5 +14,19 @@ def load_vector_store():
     return db
 
 def extract_amount_rupee(text):
-    match = re.findall(r"₹\s?\d{1,3}(?:,\d{3})*(?:\.\d{2})?", text)
-    return match[0] if match else None
+    # Match common formats like ₹5000, ₹ 5,000, Rs. 5,000, INR 50000
+    patterns = [
+        r'₹\s?[\d,]+(?:\.\d{1,2})?',         # ₹5000 or ₹ 5,000.00
+        r'Rs\.?\s?[\d,]+(?:\.\d{1,2})?',     # Rs.5000 or Rs 5,000
+        r'INR\s?[\d,]+(?:\.\d{1,2})?'        # INR5000 or INR 5,000
+    ]
+    
+    for pattern in patterns:
+        match = re.search(pattern, text)
+        if match:
+            amt = match.group().strip()
+            # Normalize the currency symbol to ₹
+            amt = amt.replace("Rs.", "₹").replace("Rs", "₹").replace("INR", "₹").replace(" ", "")
+            return amt
+    
+    return "Not specified"

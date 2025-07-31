@@ -1,4 +1,4 @@
-from flask import Flask, render_template, request, jsonify
+from flask import Flask, render_template, request
 from langchain_community.llms import Ollama
 from langchain.prompts import PromptTemplate
 from langchain.output_parsers import StructuredOutputParser, ResponseSchema
@@ -11,11 +11,23 @@ def get_relevant_clauses(query):
     results = db.similarity_search(query, k=3)
     return "\n\n".join([doc.page_content for doc in results])
 
-@app.route("/", methods=["GET", "POST"])
+@app.route("/", methods=["GET"])
 def index():
-    if request.method == "POST":
-        query = request.form["query"]
+    return render_template("index.html")
 
+@app.route("/predict", methods=["POST"])
+def predict():
+    try:
+        query = request.form.get("query", "")
+
+        if not query.strip():
+            return render_template("index.html", result={
+                "decision": "rejected",
+                "amount": "₹0",
+                "justification": "No query provided."
+            })
+
+        # Define expected JSON schema
         response_schemas = [
             ResponseSchema(name="decision", description="approved or rejected"),
             ResponseSchema(name="amount", description="₹ amount to be paid or null"),
@@ -24,6 +36,7 @@ def index():
         output_parser = StructuredOutputParser.from_response_schemas(response_schemas)
         format_instructions = output_parser.get_format_instructions()
 
+        # Prompt Template
         prompt_template = PromptTemplate(
             input_variables=["query", "context", "format_instructions"],
             template="""
@@ -54,25 +67,32 @@ Relevant Policy Clauses:
 """
         )
 
-        llm = Ollama(model="mistral")
+        llm = Ollama(model="llama3.2:1b")
         chain = prompt_template | llm | output_parser
 
         context = get_relevant_clauses(query)
+
         response = chain.invoke({
             "query": query,
             "context": context,
             "format_instructions": format_instructions
         })
 
-        # Inject ₹ amount manually if model missed it
+        # Fix key capitalization issues like 'Justification'
+        response = {k.lower(): v for k, v in response.items()}
+
+        # fallback if amount is null
         if not response.get("amount") or response["amount"] in ["null", "NULL", None]:
-            response["amount"] = extract_amount_rupee(context)
+            response["amount"] = extract_amount_rupee(context) or "₹Not specified"
 
-        return jsonify(response)
+        return render_template("index.html", result=response)
 
-    return render_template("index.html")
+    except Exception as e:
+        return render_template("index.html", result={
+            "decision": "rejected",
+            "amount": "₹0",
+            "justification": f"Internal server error: {str(e)}"
+        })
 
-# ✅ এই অংশটা সবচেয়ে গুরুত্বপূর্ণ
 if __name__ == "__main__":
-    print("🚀 Flask app running on http://127.0.0.1:5000")
     app.run(debug=True)

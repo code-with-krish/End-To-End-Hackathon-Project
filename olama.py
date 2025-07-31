@@ -41,7 +41,7 @@ from langchain.output_parsers import StructuredOutputParser, ResponseSchema
 # -------- Step 1: Load & Embed Documents --------
 @st.cache_resource
 def load_vector_store():
-    loader = DirectoryLoader("C:/Lanchain/documents", glob="*.pdf", loader_cls=PyMuPDFLoader)
+    loader = DirectoryLoader("C:\Lanchain\chatbot\documents", glob="*.pdf", loader_cls=PyMuPDFLoader)
     docs = loader.load()
     splitter = RecursiveCharacterTextSplitter(chunk_size=500, chunk_overlap=50)
     chunks = splitter.split_documents(docs)
@@ -102,7 +102,7 @@ Relevant Policy Clauses:
 )
 
 # -------- Step 6: Chain --------
-llm = Ollama(model="mistral")
+llm = Ollama(model="llama3.2:1b")
 chain = prompt_template | llm | output_parser
 
 # -------- Step 7: Streamlit UI --------
